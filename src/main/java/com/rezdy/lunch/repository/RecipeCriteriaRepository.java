@@ -4,12 +4,15 @@ import com.rezdy.lunch.repository.model.RecipeCriteriaQuery;
 import com.rezdy.lunch.entity.Recipe;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import javax.persistence.EntityManager;
 import javax.persistence.criteria.*;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Repository(value = "RecipeCriteriaRepository")
@@ -32,46 +35,62 @@ public class RecipeCriteriaRepository {
                     .where(titlePredicate)).getSingleResult();
     }
 
-    private List<Recipe> getExpiredRecipes(final LocalDate date) {
+    public List<Recipe> getExpiredRecipes(final LocalDate date) {
         RecipeCriteriaQuery recipeCriteriaQuery = new RecipeCriteriaQuery(cb);
         ArrayList<Predicate> predicates = new ArrayList<>();
         predicates.add(cb.equal(recipeCriteriaQuery.getSubqueryRoot().get("title"), recipeCriteriaQuery.getRoot().get("title")));
         predicates.add(cb.lessThan(recipeCriteriaQuery.getSubqueryRoot().join("ingredients").get("useBy"), date));
-
         Predicate ExpiredIngredients = cb.exists(recipeCriteriaQuery.getSubquery().where(predicates.toArray(Predicate[]::new)));
-        return entityManager.createQuery(recipeCriteriaQuery.getQuery()
-                .where(ExpiredIngredients)).getResultList();
+        return Optional.ofNullable(
+                entityManager.createQuery(recipeCriteriaQuery.getQuery()
+                        .where(ExpiredIngredients))
+                        .getResultList())
+                .orElse(Collections.emptyList());
     }
 
     public List<Recipe> getNonExpiredRecipes(final LocalDate date) {
         RecipeCriteriaQuery recipeCriteriaQuery = new RecipeCriteriaQuery(cb);
         List<Recipe> expiredRecipes = getExpiredRecipes(date);
+        if (expiredRecipes.isEmpty()) {
+            return Optional.ofNullable(
+                    entityManager.createQuery(recipeCriteriaQuery.getQuery()).getResultList()).orElse(Collections.emptyList());
+        }
         List<String> expiredRecipeTitles = expiredRecipes.stream().map(Recipe::getTitle).collect(Collectors.toList());
-        return entityManager.createQuery(recipeCriteriaQuery.getQuery()
+        return Optional.ofNullable(
+                entityManager.createQuery(recipeCriteriaQuery.getQuery()
                 .where(recipeCriteriaQuery.getRoot().get("title")
-                        .in(expiredRecipeTitles).not())).getResultList();
+                        .in(expiredRecipeTitles).not()))
+                        .getResultList())
+                .orElse(Collections.emptyList());
     }
 
-    private List<Recipe> getExcludedIngredientRecipes(List<String> excluded) {
+    public List<Recipe> getExcludedIngredientRecipes(List<String> excluded) {
         RecipeCriteriaQuery recipeCriteriaQuery = new RecipeCriteriaQuery(cb);
         ArrayList<Predicate> predicates = new ArrayList<>();
         excluded.forEach(ingredient -> {
             predicates.add(cb.equal(recipeCriteriaQuery.getSubqueryRoot().join("ingredients").get("title"), ingredient));
         });
-
         Predicate joinOnPredicate = cb.equal(recipeCriteriaQuery.getSubqueryRoot().get("title"), recipeCriteriaQuery.getRoot().get("title"));
         Predicate queryPredicates = cb.and(joinOnPredicate, cb.or(predicates.toArray(Predicate[]::new)));
         Predicate ExpiredIngredients = cb.exists(recipeCriteriaQuery.getSubquery().where(queryPredicates));
-
-        return entityManager.createQuery(recipeCriteriaQuery.getQuery().where(ExpiredIngredients)).getResultList();
+        return Optional.ofNullable(entityManager.createQuery(
+                recipeCriteriaQuery.getQuery()
+                        .where(ExpiredIngredients))
+                .getResultList())
+                .orElse(Collections.emptyList());
     }
 
     public List<Recipe> getNonExcludedIngredientRecipes(List<String> excluded) {
         RecipeCriteriaQuery recipeCriteriaQuery = new RecipeCriteriaQuery(cb);
         List<Recipe> excludedRecipes = getExcludedIngredientRecipes(excluded);
+        if (excludedRecipes.isEmpty()) {
+            return Optional.ofNullable(
+                    entityManager.createQuery(recipeCriteriaQuery.getQuery()).getResultList()).orElse(Collections.emptyList());
+        }
         List<String> expiredRecipeTitles = excludedRecipes.stream().map(Recipe::getTitle).collect(Collectors.toList());
-        return entityManager.createQuery(recipeCriteriaQuery.getQuery()
+        return Optional.ofNullable(entityManager.createQuery(recipeCriteriaQuery.getQuery()
                 .where(recipeCriteriaQuery.getRoot().get("title")
-                        .in(expiredRecipeTitles).not())).getResultList();
+                        .in(expiredRecipeTitles).not())).getResultList())
+                .orElse(Collections.emptyList());
     }
 }
