@@ -25,6 +25,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 
 @RunWith(SpringDataProviderRunner.class)
@@ -103,6 +104,30 @@ public class LunchControllerTest {
         mvc.perform(get("/lunch/recipe?title=" + title)
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNotFound());
+    }
+
+    @DataProvider
+    public static Object[][] validExcludedIngredientsTestData() {
+        TestRecipeListFactory factory = new TestRecipeListFactory();
+        String[] test1 = {"A"};
+        List<Recipe> expected = factory.getRecipeList(test1);
+        List<String> excluded = new ArrayList<>();
+        excluded.add("B");
+        excluded.add("C");
+
+        return new Object[][]{
+                { excluded, expected, "Test Case: Simple valid exclude ingredient request" }
+        };
+    }
+    @Test
+    @UseDataProvider("validExcludedIngredientsTestData")
+    public void validExcludedIngredientRecipesRequest(final List<String> list, final List<Recipe> expected, final String testCase) throws Exception {
+        when(lunchService.getNonExcludedIngredientRecipes(list)).thenReturn(expected);
+        mvc.perform(get("/lunch/exclude?ingredients="+ String.join(",", list))
+                .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(expected.size())))
+                .andExpect(jsonPath("$[0].title", is(expected.get(0).getTitle())));
     }
 
 }
