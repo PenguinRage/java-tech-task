@@ -34,3 +34,22 @@ The service provides an endpoint that will determine, from a set of recipes, wha
     ```
     
 3. Run Springboot LunchApplication
+
+
+### API Documentation
+Once LunchApplication is running, API documentation on executing API requests can be found at localhost:8080/swagger-ui.html
+
+##### Get Recipe By Title
+`````
+localhost:8080/lunch/recipe?title={recipe name}
+`````
+
+##### Get Non Expired Recipes By Date
+`````
+localhost:8080/lunch?date={yyyy-MM-dd}
+`````
+
+##### Get Recipes Without Excluded Ingredients
+`````
+localhost:8080/lunch/exclude?ingredients={ingredient1,ingredient2,etc}
+`````
