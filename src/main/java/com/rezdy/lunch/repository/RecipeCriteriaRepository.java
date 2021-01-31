@@ -4,7 +4,6 @@ import com.rezdy.lunch.repository.model.RecipeCriteriaQuery;
 import com.rezdy.lunch.entity.Recipe;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
-import org.springframework.transaction.annotation.Transactional;
 
 import javax.persistence.EntityManager;
 import javax.persistence.criteria.*;

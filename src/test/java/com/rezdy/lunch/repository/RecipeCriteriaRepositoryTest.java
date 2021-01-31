@@ -10,8 +10,10 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.transaction.annotation.Transactional;
 
+import javax.persistence.NoResultException;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -28,10 +30,6 @@ public class RecipeCriteriaRepositoryTest {
     @Autowired
     private RecipeCriteriaRepository recipeCriteriaRepository;
 
-
-    @Before
-    public void setUp() throws Exception {
-    }
 
     @DataProvider
     public static Object[][] validRecipeTestData() {
@@ -69,17 +67,22 @@ public class RecipeCriteriaRepositoryTest {
         }
     }
 
+    @Test(expected = EmptyResultDataAccessException.class)
+    public void invalidGetRecipe() {
+        Recipe recipe = recipeCriteriaRepository.getRecipe("pizza");
+    }
+
     @DataProvider
     public static Object[][] nonExpiredRecipesTestData() {
         final LocalDate date1 = LocalDate.parse("2021-01-31");
-        final LocalDate date2 = LocalDate.parse("1998-01-31");
-        final LocalDate date3 = LocalDate.parse("2050-01-31");
-        final ArrayList<String> expectedRecipes1 = new ArrayList<>();
+        final LocalDate date2 = LocalDate.parse("1990-01-31");
+        final LocalDate date3 = LocalDate.parse("2100-01-31");
+        final List<String> expectedRecipes1 = new ArrayList<>();
         expectedRecipes1.add("Fry-up");
         expectedRecipes1.add("Hotdog");
         expectedRecipes1.add("Ham and Cheese Toastie");
 
-        final ArrayList<String> expectedRecipes2 = new ArrayList<>();
+        final List<String> expectedRecipes2 = new ArrayList<>();
         expectedRecipes2.add("Fry-up");
         expectedRecipes2.add("Hotdog");
         expectedRecipes2.add("Ham and Cheese Toastie");
@@ -87,34 +90,60 @@ public class RecipeCriteriaRepositoryTest {
         expectedRecipes2.add("Omelette");
 
         return new Object[][]{
-                {date1, expectedRecipes1 ,"Today's Expired Recipes Test Case: "},
-                {date2, expectedRecipes2,"No Expired Recipes Test Case: "},
-                {date3, new ArrayList<String>(), "All Recipes Expired Test Case: "}
+                {date1, expectedRecipes1 ,"Test Case: Today's Expired Recipes "},
+                {date2, expectedRecipes2,"Test Case: No Expired Recipes "},
+                {date3, Collections.emptyList(), "Test Case: All Recipes Expired "}
         };
     }
 
     @Test
     @Transactional
     @UseDataProvider("nonExpiredRecipesTestData")
-    public void getNonExpiredRecipes(final LocalDate date, final ArrayList<String> expected, final String testCase) {
+    public void getNonExpiredRecipes(final LocalDate date, final List<String> expected, final String testCase) {
         final List<Recipe> recipes = recipeCriteriaRepository.getNonExpiredRecipes(date);
         assertNotNull(recipes);
+        assertEquals(testCase, recipes.size(),expected.size());
         recipes.forEach(recipe -> assertTrue(testCase + recipe.getTitle(), expected.contains(recipe.getTitle())));
     }
 
 
     @DataProvider
     public static Object[][] nonExcludedRecipesTestData() {
+        String salad = "Salad";
+        String hotdog = "Hotdog";
+        String hact = "Ham and Cheese Toastie";
+        String omelette = "Omelette";
+        String fryup = "Fry-up";
+
         ArrayList<String> excludedIngredients1 = new ArrayList<>();
         excludedIngredients1.add("Eggs");
 
+        ArrayList<String> excludedIngredients3 = new ArrayList<>();
+        excludedIngredients3.add("Eggs");
+        excludedIngredients3.add("tomato");
+        excludedIngredients3.add("mustard");
+        excludedIngredients3.add("Ham");
+
+
+
         ArrayList<String> expectedRecipes1 = new ArrayList<>();
-        expectedRecipes1.add("Salad");
-        expectedRecipes1.add("Hotdog");
-        expectedRecipes1.add("Ham and Cheese Toastie");
+        expectedRecipes1.add(salad);
+        expectedRecipes1.add(hotdog);
+        expectedRecipes1.add(hact);
+
+
+        ArrayList<String> expectedRecipes2 = new ArrayList<>();
+        expectedRecipes2.add(salad);
+        expectedRecipes2.add(hotdog);
+        expectedRecipes2.add(hact);
+        expectedRecipes2.add(omelette);
+        expectedRecipes2.add(fryup);
+
 
         return new Object[][]{
-                {excludedIngredients1, expectedRecipes1 ,"Simple Recipes Exclusion Test Case: "}
+                {excludedIngredients1, expectedRecipes1 ,"Test Case: Simple Recipes Exclusion  "},
+                { new ArrayList<String>(), expectedRecipes2, "Test Case: No Recipes Excluded " },
+                {excludedIngredients3, new ArrayList<String>(), "Test Case: Everything Excluded "}
         };
     }
 
@@ -124,6 +153,7 @@ public class RecipeCriteriaRepositoryTest {
     public void getNonExcludedIngredientRecipes(final ArrayList<String> excludedIngredients, final ArrayList<String> expected, final String testCase) {
         final List<Recipe> recipes = recipeCriteriaRepository.getNonExcludedIngredientRecipes(excludedIngredients);
         assertNotNull(recipes);
+        assertEquals(testCase, recipes.size(), expected.size());
         recipes.forEach(recipe -> assertTrue(testCase + recipe.getTitle(), expected.contains(recipe.getTitle())));
     }
 }

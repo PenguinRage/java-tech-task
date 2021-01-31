@@ -11,6 +11,7 @@ import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.web.servlet.MockMvc;
@@ -100,7 +101,7 @@ public class LunchControllerTest {
     @Test
     @UseDataProvider("invalidTitleTestData")
     public void invalidTitleForGetRecipeRequest(final String title, final String testCase) throws Exception {
-        when(lunchService.getRecipeByTitle(title)).thenThrow(NoResultException.class);
+        when(lunchService.getRecipeByTitle(title)).thenThrow(EmptyResultDataAccessException.class);
         mvc.perform(get("/lunch/recipe?title=" + title)
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNotFound());
