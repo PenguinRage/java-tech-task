@@ -1,4 +1,4 @@
-package com.rezdy.lunch.service;
+package com.rezdy.lunch.entity;
 
 import javax.persistence.Entity;
 import javax.persistence.Id;
